@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en" class="antialiased">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cafe Belfield | Immersive Experience</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- GSAP & ScrollTrigger -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+  
+  <!-- Lenis for Smooth Scrolling -->
+  <script src="https://cdn.jsdelivr.net/gh/studio-freight/lenis@1.0.29/bundled/lenis.min.js"></script>
+  
+  <!-- Three.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <style>
+    :root {
+      --bg-color: #050505;
+      --accent: #10b981; /* Emerald 500 */
+    }
+    
+    body {
+      background-color: var(--bg-color);
+      color: #ffffff;
+      margin: 0;
+      overflow-x: hidden;
+      cursor: none; /* Hide default cursor for custom cursor */
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-color);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #333;
+      border-radius: 4px;
+    }
+
+    /* Custom Cursor */
+    .cursor-dot {
+      width: 8px;
+      height: 8px;
+      background-color: var(--accent);
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      transition: width 0.2s, height 0.2s;
+    }
+    .cursor-outline {
+      width: 40px;
+      height: 40px;
+      border: 1px solid rgba(16, 185, 129, 0.5);
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9998;
+      transform: translate(-50%, -50%);
+      transition: width 0.2s, height 0.2s, background-color 0.2s;
+    }
+    
+    /* Hover state for cursor */
+    body.hovering .cursor-dot { width: 0; height: 0; }
+    body.hovering .cursor-outline {
+      width: 60px;
+      height: 60px;
+      background-color: rgba(16, 185, 129, 0.2);
+      border-color: transparent;
+      backdrop-filter: blur(2px);
+    }
+
+    /* 3D Canvas Background */
+    #webgl-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    /* Glassmorphism Utilities */
+    .glass-card {
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    /* Text Reveal Masking */
+    .reveal-text {
+      clip-path: polygon(0 0, 100% 0, 100% 100%, 0% 100%);
+    }
+    
+    /* Horizontal Scroll Container */
+    .horizontal-scroll-wrapper {
+      width: 300vw;
+      display: flex;
+      flex-wrap: nowrap;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Custom Cursor Elements -->
+  <div class="cursor-dot"></div>
+  <div class="cursor-outline"></div>
+
+  <!-- ThreeJS Background -->
+  <div id="webgl-container"></div>
+
+  <!-- Navigation -->
+  <nav class="fixed top-0 w-full z-50 p-6 flex justify-between items-center mix-blend-difference">
+    <div class="text-2xl font-bold tracking-tighter text-white">BELFIELD.</div>
+    <div class="hidden md:flex gap-8 text-sm font-medium tracking-widest uppercase text-white">
+      <a href="#about" class="magnetic-link hover:text-emerald-400 transition-colors">Story</a>
+      <a href="#portfolio" class="magnetic-link hover:text-emerald-400 transition-colors">Gallery</a>
+    </div>
+    <button class="magnetic-btn border border-white/20 rounded-full px-6 py-2 text-sm font-medium text-white hover:bg-white hover:text-black transition-all duration-300">
+      Book a Table
+    </button>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="relative h-screen flex items-center justify-center overflow-hidden pt-20">
+    <div class="relative z-10 text-center px-4 max-w-6xl mx-auto flex flex-col items-center">
+      <div class="overflow-hidden mb-2">
+        <h1 class="hero-title text-6xl md:text-[9rem] font-extrabold tracking-tighter leading-[0.9] text-transparent bg-clip-text bg-gradient-to-b from-white to-white/40">
+          CAFE
+        </h1>
+      </div>
+      <div class="overflow-hidden mb-6">
+        <h1 class="hero-title text-6xl md:text-[9rem] font-extrabold tracking-tighter leading-[0.9] text-transparent bg-clip-text bg-gradient-to-b from-white to-white/40">
+          BELFIELD
+        </h1>
+      </div>
+      <p class="hero-subtitle text-lg md:text-2xl text-zinc-400 font-light mb-10 max-w-2xl mx-auto opacity-0">
+        A cinematic culinary experience in North Strathfield. Where artisan coffee meets architectural design.
+      </p>
+      
+      <button class="hero-btn magnetic-btn bg-emerald-500 text-black px-10 py-4 rounded-full font-bold text-lg hover:bg-emerald-400 transition-colors opacity-0">
+        Explore The Menu
+      </button>
+    </div>
+    
+    <!-- Scroll Indicator -->
+    <div class="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-50">
+      <span class="text-[10px] uppercase tracking-widest">Scroll</span>
+      <div class="w-[1px] h-12 bg-white/20 overflow-hidden">
+        <div class="w-full h-full bg-white animate-[scroll-down_1.5s_ease-in-out_infinite]"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- About Section (Scroll Text Reveal) -->
+  <section id="about" class="py-32 px-6 bg-black z-10 relative">
+    <div class="max-w-5xl mx-auto">
+      <p class="text-3xl md:text-6xl font-medium leading-tight tracking-tight text-white/20" id="split-text">
+        We believe that coffee is more than a drink. It is an art form. Every pour, every plate, and every detail at Cafe Belfield is meticulously crafted to elevate your daily ritual.
+      </p>
+    </div>
+  </section>
+
+  <!-- Services (3D Tilt Cards) -->
+  <section class="py-32 px-6 relative z-10">
+    <div class="max-w-7xl mx-auto">
+      <h2 class="text-4xl md:text-6xl font-bold tracking-tighter mb-16 section-header">THE STANDARD</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <!-- Card 1 -->
+        <div class="tilt-card glass-card rounded-3xl p-8 h-96 flex flex-col justify-end relative overflow-hidden group cursor-pointer">
+          <div class="absolute inset-0 bg-[url('https://instagram.fluh3-3.fna.fbcdn.net/v/t51.82787-15/688991759_18589092436024612_5110811691873629410_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=100&_nc_map=urlgen_bucketless&ig_cache_key=Mzg5NDMwOTU3NTk2MTMzOTQ4NA%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkZFRUQueHBpZHMuNDAwMC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=YufORJ68YcIQ7kNvwFE17k4&_nc_oc=Adrn9wgkwoYHKXDthWowexdFjRNPw9MyHgnJGjfVMwtzXjzlvorn-vYh3j0ZnT0LAzfjV-mZOEFdBF0eG108bO6a&_nc_zt=23&_nc_ht=instagram.fluh3-3.fna&_nc_gid=IgmF62cxfTcOU3Hag2FiHg&_nc_ss=7b6a8&oh=00_AQNOy8PmvwSVZiDFQnNnXzTNOr1LCx1e9gXVp5ehxTMKjQ&oe=6AE11BB0')] bg-cover bg-center opacity-20 group-hover:opacity-40 transition-opacity duration-700 mix-blend-overlay"></div>
+          <div class="relative z-10 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+            <span class="text-emerald-400 font-mono text-sm mb-4 block">01</span>
+            <h3 class="text-3xl font-bold mb-2">Artisan Roasts</h3>
+            <p class="text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100">Sourced globally, roasted locally. Perfection in every cup.</p>
+          </div>
+        </div>
+        
+        <!-- Card 2 -->
+        <div class="tilt-card glass-card rounded-3xl p-8 h-96 flex flex-col justify-end relative overflow-hidden group cursor-pointer mt-0 md:mt-12">
+          <div class="absolute inset-0 bg-[url('https://instagram.fluh3-3.fna.fbcdn.net/v/t51.82787-15/682345783_18585063292024612_1130860204026141820_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=106&_nc_map=urlgen_bucketless&ig_cache_key=Mzg4MzgzMDY1NjMwMDcwMTc2Mg%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkZFRUQueHBpZHMuMTEyMi5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=cMbO0LxEbqYQ7kNvwHWwk47&_nc_oc=Ado042_dXnYGhRdTQd4yq_Lho0h4FHMZP5Iwrw3JI3SO5Qb1ob5S3i9sAxsId1EZ-0iGEweDrl_L0n9TLsgS0BfX&_nc_zt=23&_nc_ht=instagram.fluh3-3.fna&_nc_gid=IgmF62cxfTcOU3Hag2FiHg&_nc_ss=7b6a8&oh=00_AQOKWeIOgRpZlDZKr3KfFZ3ZZ-s_2YpeFtC7Sc7jGLgi9g&oe=6AE1482B')] bg-cover bg-center opacity-20 group-hover:opacity-40 transition-opacity duration-700 mix-blend-overlay"></div>
+          <div class="relative z-10 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+            <span class="text-emerald-400 font-mono text-sm mb-4 block">02</span>
+            <h3 class="text-3xl font-bold mb-2">Curated Plates</h3>
+            <p class="text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100">Farm-fresh ingredients crafted into culinary masterpieces.</p>
+          </div>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="tilt-card glass-card rounded-3xl p-8 h-96 flex flex-col justify-end relative overflow-hidden group cursor-pointer mt-0 md:mt-24">
+          <div class="absolute inset-0 bg-[url('https://instagram.fluh3-2.fna.fbcdn.net/v/t39.30808-6/654212890_946356214572871_4249390489647212321_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=100&_nc_map=urlgen_bucketless&ig_cache_key=Mzg1NzI0MjM5NzcwOTYyNTc1Nw%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkZFRUQueHBpZHMuMTM2NS5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=jfutT7M48xMQ7kNvwFaqFX7&_nc_oc=Adpkxv3jdV-AN6PRR4uKXDnnyjQaG4onX1ZjfVhs6Cs2fUvYbuIDdPpsHR4uYHcPUGwaTgpcIDCBcDOXBiLFWO6o&_nc_zt=23&_nc_ht=instagram.fluh3-2.fna&_nc_gid=EHGus5LJzobxwNAwkmX46g&_nc_ss=7b6a8&oh=00_AQMb_2KP1a3clNCOcOvl3sBg1GtjsuU7C4IpNd9Izd1yNg&oe=6AE1945D')] bg-cover bg-center opacity-20 group-hover:opacity-40 transition-opacity duration-700 mix-blend-overlay"></div>
+          <div class="relative z-10 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+            <span class="text-emerald-400 font-mono text-sm mb-4 block">03</span>
+            <h3 class="text-3xl font-bold mb-2">The Ambiance</h3>
+            <p class="text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100">A dark, moody aesthetic designed for deep conversations.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Horizontal Scroll Portfolio -->
+  <section id="portfolio" class="h-screen bg-black flex items-center overflow-hidden relative z-10">
+    <div class="absolute top-20 left-10 z-20">
+      <h2 class="text-5xl md:text-7xl font-bold tracking-tighter text-white mix-blend-difference section-header">GALLERY</h2>
+    </div>
+    
+    <div class="horizontal-scroll-wrapper pl-[10vw]">
+      <!-- Image 1 -->
+      <div class="w-[80vw] md:w-[50vw] h-[60vh] flex-shrink-0 mr-10 relative overflow-hidden rounded-2xl group">
+        <img src="https://picsum.photos/id/42/1200/800" alt="Cafe Interior" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000">
+        <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+        <div class="absolute bottom-10 left-10">
+          <p class="text-emerald-400 tracking-widest text-sm uppercase mb-2">Interior</p>
+          <h3 class="text-4xl font-bold">The Space</h3>
+        </div>
+      </div>
+      
+      <!-- Image 2 -->
+      <div class="w-[80vw] md:w-[50vw] h-[60vh] flex-shrink-0 mr-10 relative overflow-hidden rounded-2xl group">
+        <img src="https://picsum.photos/id/366/1200/800" alt="Food" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000">
+        <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+        <div class="absolute bottom-10 left-10">
+          <p class="text-emerald-400 tracking-widest text-sm uppercase mb-2">Culinary</p>
+          <h3 class="text-4xl font-bold">Signature Brunch</h3>
+        </div>
+      </div>
+      
+      <!-- Image 3 -->
+      <div class="w-[80vw] md:w-[50vw] h-[60vh] flex-shrink-0 mr-10 relative overflow-hidden rounded-2xl group">
+        <img src="https://picsum.photos/id/225/1200/800" alt="Coffee" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000">
+        <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+        <div class="absolute bottom-10 left-10">
+          <p class="text-emerald-400 tracking-widest text-sm uppercase mb-2">Craft</p>
+          <h3 class="text-4xl font-bold">Latte Art</h3>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="py-20 px-6 bg-black border-t border-white/5 relative z-10">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-10">
+      <div class="text-center md:text-left">
+        <h2 class="text-4xl font-extrabold tracking-tighter mb-4">CAFE BELFIELD.</h2>
+        <p class="text-zinc-500 max-w-xs">Unit 2/24 Burwood Rd, Belfield NSW 2191, Australia</p>
+      </div>
+      
+      <div class="flex flex-col items-center md:items-end gap-6">
+        <a href="https://www.instagram.com/cafebelfield/" target="_blank" class="magnetic-btn group flex items-center gap-4 text-xl font-medium">
+          <span class="group-hover:text-emerald-400 transition-colors">Follow on Instagram</span>
+          <div class="w-12 h-12 rounded-full border border-white/20 flex items-center justify-center group-hover:border-emerald-400 transition-colors">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm3.98-10.181a1.44 1.44 0 11-2.88 0 1.44 1.44 0 012.88 0z"/></svg>
+          </div>
+        </a>
+        <p class="text-sm text-zinc-600">© 2026 Cafe Belfield. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <style>
+    @keyframes scroll-down {
+      0% { transform: translateY(-100%); }
+      50% { transform: translateY(0); }
+      100% { transform: translateY(100%); }
+    }
+  </style>
+
+  <script>
+    // ==================================================
+    // 1. INIT LENIS (Smooth Scroll)
+    // ==================================================
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      direction: 'vertical',
+      gestureDirection: 'vertical',
+      smooth: true,
+      mouseMultiplier: 1,
+      smoothTouch: false,
+    });
+
+    function raf(time) {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    }
+    requestAnimationFrame(raf);
+
+    // ==================================================
+    // 2. CUSTOM CURSOR
+    // ==================================================
+    const cursorDot = document.querySelector('.cursor-dot');
+    const cursorOutline = document.querySelector('.cursor-outline');
+    let mouseX = 0, mouseY = 0;
+    let outlineX = 0, outlineY = 0;
+
+    window.addEventListener('mousemove', (e) => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+      cursorDot.style.left = `${mouseX}px`;
+      cursorDot.style.top = `${mouseY}px`;
+    });
+
+    // Lerp for smooth trailing effect
+    function animateCursor() {
+      let distX = mouseX - outlineX;
+      let distY = mouseY - outlineY;
+      outlineX = outlineX + (distX * 0.15);
+      outlineY = outlineY + (distY * 0.15);
+      cursorOutline.style.left = `${outlineX}px`;
+      cursorOutline.style.top = `${outlineY}px`;
+      requestAnimationFrame(animateCursor);
+    }
+    animateCursor();
+
+    // Hover states for cursor
+    const hoverElements = document.querySelectorAll('a, button, .magnetic-btn, .tilt-card');
+    hoverElements.forEach(el => {
+      el.addEventListener('mouseenter', () => document.body.classList.add('hovering'));
+      el.addEventListener('mouseleave', () => document.body.classList.remove('hovering'));
+    });
+
+    // ==================================================
+    // 3. THREE.JS IMMERSIVE BACKGROUND
+    // ==================================================
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    document.getElementById('webgl-container').appendChild(renderer.domElement);
+
+    // Create a smooth, dark, glossy Torus Knot
+    const geometry = new THREE.TorusKnotGeometry(10, 3, 200, 32);
+    const material = new THREE.MeshPhysicalMaterial({ 
+      color: 0x0a0a0a,
+      roughness: 0.2,
+      metalness: 0.8,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.1,
+      wireframe: false
+    });
+    
+    const torusKnot = new THREE.Mesh(geometry, material);
+    scene.add(torusKnot);
+
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+    scene.add(ambientLight);
+
+    const pointLight = new THREE.PointLight(0x10b981, 5, 100); // Emerald glowing light
+    pointLight.position.set(10, 10, 10);
+    scene.add(pointLight);
+
+    camera.position.z = 30;
+
+    // Follow mouse with light and slight object rotation
+    let targetX = 0;
+    let targetY = 0;
+    
+    document.addEventListener('mousemove', (event) => {
+      targetX = (event.clientX / window.innerWidth) * 2 - 1;
+      targetY = -(event.clientY / window.innerHeight) * 2 + 1;
+    });
+
+    function animate3D() {
+      requestAnimationFrame(animate3D);
+      
+      // Auto rotation
+      torusKnot.rotation.x += 0.002;
+      torusKnot.rotation.y += 0.003;
+
+      // Mouse interaction (parallax)
+      torusKnot.rotation.x += 0.01 * (targetY - torusKnot.rotation.x);
+      torusKnot.rotation.y += 0.01 * (targetX - torusKnot.rotation.y);
+      
+      // Light follows mouse
+      pointLight.position.x += (targetX * 20 - pointLight.position.x) * 0.05;
+      pointLight.position.y += (targetY * 20 - pointLight.position.y) * 0.05;
+
+      // Scroll effect on 3D object
+      torusKnot.position.y = window.scrollY * -0.01;
+
+      renderer.render(scene, camera);
+    }
+    animate3D();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // ==================================================
+    // 4. GSAP ANIMATIONS & SCROLL TRIGGER
+    // ==================================================
+    gsap.registerPlugin(ScrollTrigger);
+
+    // Hero Reveal
+    const heroTl = gsap.timeline();
+    heroTl.from('.hero-title', {
+      y: 150,
+      opacity: 0,
+      duration: 1.5,
+      stagger: 0.15,
+      ease: "power4.out",
+      delay: 0.2
+    })
+    .to('.hero-subtitle', {
+      opacity: 1,
+      y: 0,
+      duration: 1,
+      ease: "power2.out"
+    }, "-=1")
+    .to('.hero-btn', {
+      opacity: 1,
+      y: 0,
+      duration: 1,
+      ease: "power2.out"
+    }, "-=0.8");
+
+    // Text Reveal (About Section)
+    const textElement = document.getElementById("split-text");
+    const words = textElement.innerText.split(" ");
+    textElement.innerHTML = "";
+    words.forEach(word => {
+      const span = document.createElement("span");
+      span.innerText = word + " ";
+      span.style.color = "rgba(255,255,255,0.2)";
+      span.style.transition = "color 0.4s ease";
+      textElement.appendChild(span);
+    });
+
+    const spans = textElement.querySelectorAll("span");
+    gsap.to(spans, {
+      scrollTrigger: {
+        trigger: "#about",
+        start: "top 70%",
+        end: "bottom 80%",
+        scrub: 1,
+      },
+      color: "#ffffff",
+      stagger: 0.1
+    });
+
+    // Fade In Sections
+    gsap.utils.toArray('.section-header').forEach(header => {
+      gsap.from(header, {
+        scrollTrigger: {
+          trigger: header,
+          start: "top 85%",
+        },
+        y: 50,
+        opacity: 0,
+        duration: 1,
+        ease: "power3.out"
+      });
+    });
+
+    // Horizontal Scroll Gallery
+    const horizontalWrapper = document.querySelector('.horizontal-scroll-wrapper');
+    gsap.to(horizontalWrapper, {
+      x: () => -(horizontalWrapper.scrollWidth - window.innerWidth) + "px",
+      ease: "none",
+      scrollTrigger: {
+        trigger: "#portfolio",
+        start: "top top",
+        end: () => "+=" + horizontalWrapper.scrollWidth,
+        pin: true,
+        scrub: 1,
+        anticipatePin: 1
+      }
+    });
+
+    // ==================================================
+    // 5. MAGNETIC BUTTONS & TILT CARDS (Vanilla JS)
+    // ==================================================
+    
+    // Magnetic Elements
+    const magnets = document.querySelectorAll('.magnetic-btn, .magnetic-link');
+    magnets.forEach((magnet) => {
+      magnet.addEventListener('mousemove', (e) => {
+        const position = magnet.getBoundingClientRect();
+        const x = e.clientX - position.left - position.width / 2;
+        const y = e.clientY - position.top - position.height / 2;
+        
+        gsap.to(magnet, {
+          x: x * 0.3,
+          y: y * 0.3,
+          duration: 0.5,
+          ease: "power3.out"
+        });
+      });
+
+      magnet.addEventListener('mouseleave', () => {
+        gsap.to(magnet, {
+          x: 0,
+          y: 0,
+          duration: 0.7,
+          ease: "elastic.out(1, 0.3)"
+        });
+      });
+    });
+
+    // 3D Tilt Cards
+    const cards = document.querySelectorAll('.tilt-card');
+    cards.forEach(card => {
+      card.addEventListener('mousemove', (e) => {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        
+        // Calculate rotation (-10 to 10 degrees)
+        const rotateX = ((y - centerY) / centerY) * -10;
+        const rotateY = ((x - centerX) / centerX) * 10;
+
+        gsap.to(card, {
+          rotateX: rotateX,
+          rotateY: rotateY,
+          transformPerspective: 1000,
+          duration: 0.4,
+          ease: "power2.out"
+        });
+      });
+
+      card.addEventListener('mouseleave', () => {
+        gsap.to(card, {
+          rotateX: 0,
+          rotateY: 0,
+          duration: 0.7,
+          ease: "elastic.out(1, 0.3)"
+        });
+      });
+    });
+  </script>
+</body>
+</html>
